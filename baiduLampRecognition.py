@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 from cnocr import CnOcr
 
@@ -9,7 +10,8 @@ from appium import webdriver
 from appium.options.android import UiAutomator2Options
 from appium.webdriver.common.appiumby import AppiumBy
 import cv2
-from sympy import false
+
+from baiduditu import image
 
 
 def adb_tap(x, y):
@@ -21,6 +23,8 @@ def adb_tap(x, y):
     '''
     cmd = f'adb shell input tap {x} {y}'
     os.system(cmd)
+
+# 下面四个函数是我基于初版修改的在这个基础上修改
 
 def crop_lamp_area(image):
 
@@ -147,7 +151,6 @@ def detect_lamp_countdown(black_region):
     print(out_str)
     return out_str
 
-
 def baiduLampRecognition(image):
 
     '''
@@ -172,6 +175,8 @@ def baiduLampRecognition(image):
         lampCountdown = detect_lamp_countdown(lampArea)
 
         return lampColor, lampCountdown
+
+# 上面四个函数是我基于初版修改的在这个基础上修改
 
 def lampImageAcquire():
 
@@ -247,6 +252,36 @@ def lampImageAcquire():
 
     return image_cv
 
+def check_adb_devices():
+    '''
+    检查adb 设备，并返回设备sn list
+
+    :return: 设备sn list
+    '''
+    adb_list = []
+    ret = os.popen('adb devices').readlines()
+    # print('ret={}'.format(ret))
+    if len(ret) == 0:
+        print('未读取到信息')
+        # return adb_list
+        return False
+    else:
+        for n in ret:
+            if '\tdevice\n' in n:
+                adb = str(n).strip().split('\tdevice')[0].strip()
+                adb_list.append(str(adb))
+
+        if len(adb_list) == 1:
+
+            # print('adb设备数量={}，adb_list={}'.format(len(adb_list), adb_list))
+            # return adb_list
+            print('已正确识别到adb 设备...')
+            return True
+
+        print('未识别到恰当数量的adb 设备...')
+        return False
+
+
 def initEnvironment():
     '''
     初始化环境
@@ -254,9 +289,31 @@ def initEnvironment():
     :return:
     '''
 
+    isAndroidOnline = False
+
+    while isAndroidOnline == False:
+
+        #死循环轮询设备
+        isAndroidOnline = check_adb_devices()
+        sleep(1)
+
+    if subprocess.Popen('cmd /K appium', creationflags=subprocess.CREATE_NEW_CONSOLE):
+        print("已启动appium服务")
+        print("安卓测试平台初始化完成")
+        return True
+    else:
+        print("安卓测试平台初始化失败！")
+        return False
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
 
-    image = cv2.imread('test.jpg')
-    baiduLampRecognition(image)
+    image = cv2.imread("image.jpg")
+    lampColor, lampCountdown = baiduLampRecognition(image)
